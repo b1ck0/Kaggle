@@ -1,0 +1,378 @@
+---
+title: "Titanic Disaster"
+author: "Vasil Yordanov"
+date: "26 June 2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Logistic Regression without any feature engineering
+
+This is my first Kaggle kernel. Here I am going to predict who is going to survive the Titanic distaster using logistic regression. First let's load the datasets provided by Kaggle.
+
+```{r datasets}
+train = read.csv("train.csv", stringsAsFactors = F)
+test = read.csv("test.csv", stringsAsFactors = F)
+```
+
+Next let's inspect the training dataset, I are currently not focusing on the testing dataset as its structure is equivalent with the training dataset and only the number of observations will be different.
+
+```{r structure train}
+str(train)
+```
+
+Here is the place to include some information about the variables:
+
+* PassengerId - ID of the passenger (this will definately be exluded from our regression model)
+* Survived - factor variable indicating if the passenger survived (1) or not (0) the accident
+* Pclass - factor variable indicating the ticket class 1st (upper), 2nd (middle) or 3rd (lower)
+* Name - name of the passenger
+* Sex - gender of the passenger
+* Age - fractional if less than 1 and in form xx.5 if estimated
+* SibSp - number of siblings / spouses aboard the Titanic
+* Parch - number of parents / children aboard the Titanic
+* Ticket - ticket number
+* Fare - passenger fare
+* Cabin - cabin number
+* Embarked - facotr variable indicating the port of embarkation C (Cherbourg), Q (Queenstown), S (Southampton)
+
+This reminds me that I need to convert some variables:
+
+```{r}
+train$Survived = as.factor(as.character(train$Survived))
+train$Pclass = as.factor(as.character(train$Pclass))
+train$Sex = as.factor(as.character(train$Sex))
+train$Embarked = as.factor(as.character(train$Embarked))
+
+test$Pclass = as.factor(as.character(test$Pclass))
+test$Sex = as.factor(as.character(test$Sex))
+test$Embarked = as.factor(as.character(test$Embarked))
+```
+
+Let's continue with our data exploration:
+
+```{r summary train}
+summary(train)
+```
+
+From the summary I can see that there are 177 missing observations for the Age variable. I need to investigate this further in order to decide what to do with these 177 observations. Thus I will make a subset of the training dataset containing only the observations with missing age.
+
+```{r subset with missing Age}
+missing = subset(train, is.na(Age))
+summary(missing)
+```
+
+Looking on the summary doesn't bring much insight if these passenger do have something in common, other that the missing Age. Thus I will inspect this visually.
+
+```{r histogram 1}
+library(ggplot2)
+
+ggplot() + 
+    geom_histogram(data = train, mapping = aes(x = Fare), fill = "blue", bins = 5) +
+    geom_histogram(data = missing, mapping = aes(x = Fare), fill = "red", bins = 5) + 
+    facet_grid(.~ Pclass)
+```
+
+From this graph we can notice that most of the passengers with missing Age also have common Pclass value of 3. Here is a summary table of that:
+
+```{r Pclass table for missing}
+table(missing$Pclass, missing$Sex)
+```
+
+If we simply omit these observations in our logistics regression model we will introduce selection bias in our model as we will remove mostly male, low-fare, low-class passengers. Thus we want to impute the missing data
+
+```{r imputation, message=FALSE, warning=FALSE, results='hide'}
+library(mice)
+imputed = complete(mice(train,m=5,maxit=50,meth='pmm',seed=500))
+imputed.test = complete(mice(test,m=5,maxit=50,meth='pmm',seed=500))
+```
+
+```{r Age distribution after imputation, warning=FALSE}
+ggplot() +
+    geom_histogram(data = imputed, mapping = aes(x = Age), fill = "red", bins = 10) +
+    geom_histogram(data = train, mapping = aes(x = Age), fill = "black", bins = 10, alpha = 0.4) +
+    facet_grid(. ~ Sex)
+```
+
+After the imputation I do not have anymore missing data and the Age distribution among women and men seems to be unchanged. Before continuing with my exploratory data analysis I want to construct a dummy baseline model for prediction:
+
+```{r dummy model}
+table(train$Survived)
+```
+
+My baseline model will predict that Survived = 0, no matter what and it will be accurate in approximately 62% (549/891) of the cases (which is pretty big accuracy by the way). Thus I need to build a logistic regression model later which can beat that. But before that I need to identify the significant variables which can help to improve my prediction score.
+
+```{r exploratory 1, warning=FALSE}
+ggplot() +
+    geom_histogram(data = imputed, mapping = aes(x = Survived, fill = factor(Sex)), alpha = 0.8, stat="count")
+```
+
+
+```{r exploratory 2}
+ggplot() +
+    geom_histogram(data = imputed, mapping = aes(x = Age, fill = factor(Survived)), bins = 10) +
+    facet_grid(. ~ Sex)
+```
+
+```{r exploratory 3, warning=FALSE}
+ggplot() +
+    geom_histogram(data = imputed, mapping = aes(x = Pclass, fill = factor(Survived)), stat="count") +
+    facet_grid(. ~ Sex)
+```
+
+```{r exploratory 4, warning=FALSE}
+ggplot() +
+    geom_histogram(data = imputed, mapping = aes(x = SibSp, fill = factor(Survived)), stat="count") +
+    facet_grid(. ~ Sex)
+```
+
+```{r exploratory 5, warning=FALSE}
+ggplot() +
+    geom_histogram(data = imputed, mapping = aes(x = Parch, fill = factor(Survived)), stat="count") +
+    facet_grid(. ~ Sex)
+```
+
+```{r exploratory 6, warning=FALSE}
+ggplot() +
+    geom_histogram(data = imputed, mapping = aes(x = Embarked, fill = factor(Survived)), stat="count") +
+    facet_grid(. ~ Sex)
+```
+
+Building my first logistic regression model
+
+```{r model1 training, warnings=FALSE}
+imputed = subset(imputed, select = -c(PassengerId))
+model1 = glm(Survived ~ Sex + Pclass + Embarked + SibSp, data = imputed, family=binomial)
+predict1 = predict(model1, type="response")
+
+a = table(imputed$Survived, predict1 >= 0.5)
+
+TP = a[2,2] # true positives
+TN = a[1,1] # true negatives
+FP = a[1,2] # false positives
+FN = a[2,1] # false negatives
+
+sensitivity = TP/(TP+FN)
+specificity = TN/(TN+FN)
+accuracy = (TN + TP)/(TN + TP + FP + FN)
+```
+
+The accuracy of this model is 79.2% on the training set. Let's see what's the AUC value:
+
+```{r AUC.value model1, warning=FALSE}
+library(ROCR)
+
+ROCRpred = prediction(predict1, train$Survived)
+as.numeric(performance(ROCRpred, "auc")@y.values)
+```
+
+Well this AUC value is quite high, which means that my model quite differentiate between the passengers who survived and those who didn't.
+
+```{r AUC.curve model1, warning=FALSE}
+perf = performance(ROCRpred,measure = "tpr", x.measure = "fpr") 
+plot(perf, col=rainbow(10))
+```
+
+## Logistic Regression using feature engineering
+
+Well my logistic regression model works a bit better than the baseline model but I believe it can do much better if I apply feature engineering. But first I will copy the missing age observations to my training set:
+
+```{r updating train}
+train$Age = imputed$Age
+test$Age = imputed.test$Age
+```
+
+First I will start by adding a factor variable indicating of the passenger is a child:
+
+```{r adding child variable}
+train$child = train$Age < 18
+test$child = test$Age < 18
+```
+
+Next I will add a numerical variable showing the number of accompanying family members:
+
+```{r adding familySize variable}
+train$familySize = train$SibSp + train$Parch + 1
+test$familySize = test$SibSp + test$Parch + 1
+```
+
+Now I will separate the title from the passengers' names and put it in an additional variable:
+
+```{r adding title variable}
+train$Title = gsub('(.*, )|(\\..*)', '', train$Name)
+test$Title = gsub('(.*, )|(\\..*)', '', test$Name)
+```
+
+
+```{r post-processing titles}
+# code taken 1:1 from Megan Risdal
+
+rare_title <- c('Dona', 'Lady', 'the Countess','Capt', 'Col', 'Don', 
+                'Dr', 'Major', 'Rev', 'Sir', 'Jonkheer')
+
+train$Title[train$Title == 'Mlle']        <- 'Miss' 
+train$Title[train$Title == 'Ms']          <- 'Miss'
+train$Title[train$Title == 'Mme']         <- 'Mrs' 
+train$Title[train$Title %in% rare_title]  <- 'Rare Title'
+
+test$Title[test$Title == 'Mlle']        <- 'Miss' 
+test$Title[test$Title == 'Ms']          <- 'Miss'
+test$Title[test$Title == 'Mme']         <- 'Mrs' 
+test$Title[test$Title %in% rare_title]  <- 'Rare Title'
+
+```
+
+```{r adding mother variable}
+train$mother =  train$Sex == "female" & train$Parch > 0 & train$child == FALSE & train$Title != "Miss"
+test$mother = test$Sex == 'female' & test$Parch > 0 & test$child == FALSE & test$Title != "Miss"
+```
+
+Now I will build my second logistic regression model:
+
+```{r model2 training, warnings=FALSE}
+data2 = subset(train, select = -c(PassengerId))
+model2 = glm(Survived ~ Sex + Pclass + Embarked + SibSp + mother + child + Title + familySize, data = data2, family=binomial)
+predict2 = predict(model2, type="response")
+
+a = table(data2$Survived, predict2 >= 0.5)
+
+TP = a[2,2] # true positives
+TN = a[1,1] # true negatives
+FP = a[1,2] # false positives
+FN = a[2,1] # false negatives
+
+sensitivity = TP/(TP+FN)
+specificity = TN/(TN+FN)
+accuracy = (TN + TP)/(TN + TP + FP + FN)
+```
+
+The accuracy on the training set increased to 83.16%. Now regarding the new AUC score:
+
+```{r AUC.value model2, warning=FALSE}
+library(ROCR)
+
+ROCRpred = prediction(predict2, data2$Survived)
+as.numeric(performance(ROCRpred, "auc")@y.values)
+```
+
+Well this AUC value is quite high, which means that my model quite differentiate between the passengers who survived and those who didn't.
+
+```{r AUC.curve model2, warning=FALSE}
+perf2 = performance(ROCRpred,measure = "tpr", x.measure = "fpr") 
+plot(perf2, col=rainbow(10))
+```
+
+Let's submit this version and see how it will get scored in Kaggle.
+
+```{r model2 testing, warnings=FALSE}
+prediction2 <- predict(model2, newdata=test, type = "response")
+solution2 <- data.frame(PassengerID = test$PassengerId, Survived = round(prediction2, 0))
+write.csv(solution2, file = 'model2_Solution.csv', row.names = F)
+```
+
+This model was scored 77.99% at Kaggle.
+
+## Random Forest using feature engineering
+
+Now I want to test how a non-linear model will score on this problem. For doing this I will use a random forest to determine which would be the best regression tree for this dataset.
+
+```{r new packages, warning=FALSE}
+library(randomForest)
+library(rpart.plot)
+library(rpart)
+library(caret)
+library(e1071)
+```
+
+```{r setting-up random forest}
+# Defining cross-validation experiment
+numFolds = trainControl(method = "cv", number = 50 )
+cpGrid = expand.grid( .cp = seq(0.005,0.05,0.0001)) 
+
+# Performing the cross validation
+train(Survived ~ Sex + 
+                 Pclass + 
+                 Embarked + 
+                 SibSp + 
+                 mother + 
+                 child + 
+                 Title + 
+                 familySize, data = train, method = "rpart", trControl = numFolds, tuneGrid = cpGrid )
+```
+
+Now I will build my CART model based on cp = 0.0149 and have a look on it
+
+```{r CART}
+bestTree = rpart(Survived ~ Sex + 
+                 Pclass + 
+                 Embarked + 
+                 SibSp + 
+                 mother + 
+                 child + 
+                 Title + 
+                 familySize, data = train, method="class", cp = 0.0149)
+
+prp(bestTree)
+```
+
+Surpisingly our classification tree looks quite simple. 
+
+Let's submit this version and see how it will get scored in Kaggle.
+
+```{r model3 testing, warnings=FALSE}
+prediction3 <- predict(bestTree, newdata=test, type = "class")
+solution3 <- data.frame(PassengerID = test$PassengerId, Survived = as.numeric(prediction3)-1)
+write.csv(solution3, file = 'model3_Solution.csv', row.names = F)
+```
+
+This prediction scored 78.947% at Kaggle, which is a bit of disappointment. It seems that I am doing a principal error - in other words I need to take a second look at the data - manually and decide how to proceed.
+
+## Second round of Exploratory Analysis
+
+```{r exploratory.v2-1}
+summary(train)
+```
+
+```{r exploratory.v2-2}
+table(train$mother, train$Survived)/nrow(train)
+```
+
+
+```{r exploratory.v2-3}
+table(train$Pclass, train$Survived)/nrow(train)
+```
+
+```{r exploratory.v2-4}
+table(train$familySize, train$Survived)/nrow(train)
+```
+
+```{r exploratory.v2-5}
+table(train$Title, train$Survived)/nrow(train)
+```
+
+```{r exploratory.v2-6}
+table(train$Embarked, train$Survived)/nrow(train)
+```
+
+```{r exploratory.v2-7}
+table(train$child, train$Survived)/nrow(train)
+```
+
+```{r correlation matrox warning=FALSE}
+library(corrplot)
+library(Hmisc)
+
+res = cor(train)
+
+corrplot(res, type = "upper", order = "hclust", 
+         tl.col = "black", tl.srt = 45)
+```
+
+
+
+
