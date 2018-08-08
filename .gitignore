@@ -2,3 +2,11 @@
 *.csv
 *.gz
 *.zip
+*.data-00000-of-00001
+*.index
+*.meta
+03 - MNIST/jupyter/CNN_CLASSIFIER/graph.pbtxt
+03 - MNIST/jupyter/CNN_CLASSIFIER/events.out.tfevents.1533745103.DESKTOP-PFVO526
+03 - MNIST/jupyter/CNN_CLASSIFIER/eval/events.out.tfevents.1533748546.DESKTOP-PFVO526
+03 - MNIST/jupyter/CNN_CLASSIFIER/checkpoint
+03 - MNIST/jupyter/MNIST - Example by Google.ipynb
