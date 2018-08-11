@@ -10,3 +10,7 @@
 03 - MNIST/jupyter/CNN_CLASSIFIER/eval/events.out.tfevents.1533748546.DESKTOP-PFVO526
 03 - MNIST/jupyter/CNN_CLASSIFIER/checkpoint
 03 - MNIST/jupyter/MNIST - Example by Google.ipynb
+06 - Value Prediction/jupyter/DNN_REGRESSOR/checkpoint
+06 - Value Prediction/jupyter/DNN_REGRESSOR/eval/events.out.tfevents.1534002516.DESKTOP-PFVO526
+06 - Value Prediction/jupyter/DNN_REGRESSOR/events.out.tfevents.1534001646.DESKTOP-PFVO526
+*.pbtxt
