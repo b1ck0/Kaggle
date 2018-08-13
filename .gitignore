@@ -14,3 +14,9 @@
 06 - Value Prediction/jupyter/DNN_REGRESSOR/eval/events.out.tfevents.1534002516.DESKTOP-PFVO526
 06 - Value Prediction/jupyter/DNN_REGRESSOR/events.out.tfevents.1534001646.DESKTOP-PFVO526
 *.pbtxt
+04 - House Prices/jupyter/DNN_CUSTOM_REGRESSOR/checkpoint
+*.DESKTOP-PFVO526
+07 - Taxi Fare/jupyter/DNN_Linear_Combined_Regressor/checkpoint
+*.data-00000-of-00002
+*.data-00001-of-00002
+04 - House Prices/jupyter/DNN_REGRESSOR/checkpoint
