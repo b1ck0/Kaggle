@@ -21,3 +21,16 @@
 *.data-00001-of-00002
 04 - House Prices/jupyter/DNN_REGRESSOR/checkpoint
 *.DESKTOP-4IAB65N
+07 - Taxi Fare/jupyter/logs/lr_1e-03_layers_5_nodes_400_5599/checkpoint
+07 - Taxi Fare/jupyter/logs/lr_1e-04_layers_5_nodes_128_2500/checkpoint
+07 - Taxi Fare/jupyter/logs/lr_1e-05_layers_4_nodes_70_4939/checkpoint
+07 - Taxi Fare/jupyter/logs/lr_2e-06_layers_6_nodes_52_6250/checkpoint
+07 - Taxi Fare/jupyter/logs/lr_3e-02_layers_5_nodes_474_8085/checkpoint
+07 - Taxi Fare/jupyter/logs/lr_3e-04_layers_4_nodes_354_4768/checkpoint
+07 - Taxi Fare/jupyter/logs/lr_4e-03_layers_1_nodes_185_7023/checkpoint
+07 - Taxi Fare/jupyter/logs/lr_4e-04_layers_6_nodes_512_6614/checkpoint
+07 - Taxi Fare/jupyter/logs/lr_4e-07_layers_2_nodes_494_8217/checkpoint
+07 - Taxi Fare/jupyter/logs/lr_6e-03_layers_1_nodes_484_6844/checkpoint
+07 - Taxi Fare/jupyter/logs/lr_7e-08_layers_5_nodes_337_8199/checkpoint
+07 - Taxi Fare/jupyter/logs/lr_9e-04_layers_1_nodes_512_128/checkpoint
+07 - Taxi Fare/jupyter/logs/lr_9e-07_layers_5_nodes_35_5471/checkpoint
